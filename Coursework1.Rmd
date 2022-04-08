@@ -1,0 +1,297 @@
+---
+title: "Assessed Coursework"
+author: "Archie Boswell"
+date: "23/04/2020"
+output:
+  word_document: default
+  html_document: default
+editor_options:
+  chunk_output_type: inline
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(readr)
+library(readr)
+library(dplyr)
+setwd("~/Downloads/SMM Coursework")
+Births <- read.table("BirthTrain.txt", header = TRUE)
+gest<- Births$gest
+sex<- Births$sex
+smokes<- Births$smokes
+weight<- Births$weight
+rate<- Births$rate
+bwt<- Births$bwt
+```
+
+###
+Introduction
+
+
+
+
+In this report we will be analysing 327 observations of new born babies and investigating which variables affect the birth weight most significantly. The data then used to identify the relationships between the variables and to create a linear model that predicts the birth weight. The most influencial variables were the gestation period and the weight of the mother, others were required in the model but they were less significant.
+
+Exploratory analysis:
+
+The variables that we will be looking at are the: Mothers age, sex of the baby , gestation peroid, rate of growth during the fist trimester, sex of the child and how heavily the mother smoked. We treat whether the Mother smoked and the sex of the baby as factor variables because they are categorical, with levels: Heavy, Light and Non; Male and female, respectively.  
+
+
+```{r}
+smokes<- factor(smokes)
+sex<- factor(sex)
+```
+
+A pairwise scatter plot allows us to visualise the continuous variables and how they correlate with each other, allowing us to distinguish which variables have clear relations.
+```{r}
+library(ggplot2)
+plot(Births[,c(1,2,5,6,7)])
+```
+
+The variables with the strongest positive correlation with birth weight (bwt) is the gestation peroid and the weight of the mother, this could be because these factors are influenced by genetics.
+this can be represented more clearly by inlcuding a simple regression line. 
+
+```{r}
+plot(bwt, gest, main='bwt against gest', xlab = "Birth weight",ylab = "Gestation period")
+abline(lm(gest~bwt, data = Births), col='blue')
+```
+
+```{r}
+plot(bwt, weight, main='bwt against weight of mother', xlab = "Birth weight",ylab = "Mothers weight")
+abline(lm(weight~bwt, data = Births), col="blue")
+
+```
+
+To analyse the relationship between the factor variables and the birth weight we use box plots.
+
+```{r}
+boxplot(bwt~smokes, xlab="smokes", ylab="Births Weight (g)")
+
+```
+From the box plot we can see that the highest upper and lower quartiles and median of birth weight is for the children who's mother didn't smoke during pregnancy. Despite this level having the most outliers and the greatest range of values, it gives the best average as it has the most number of observations.
+For the Heavy smokers, we can see that it has the largest inter-quartile range and also the lowest values within it. The association with the amount the mother smoked and the birth weight of the child suggests that the new born would be heavier for those show mothers don't smoke. Despite this, there is insufficient evidence to comment on how the amount smoked by the mother, influences the birth weight, also, we don't know how significant this variable is compared to others. To improve the accuracy of this data the amount one smoked should be represented as an integer value for the number of cigarettes smoked per week to remove ambiguity between what is considered a light and heavy smoker. 
+
+Comparing smoking with other variables the only other clear relationship we can see is that the heavy smokers age between 25-30, excluding outliers.
+
+Now we anlalyse how the sex of the baby impacts the birth weight.
+```{r}
+boxplot(bwt~sex, xlab="Sex", ylab="Birth Weight (g)")
+```
+The male and female box plots are very similar however the male category has a slightly larger median and also larger upper and lower quartile values meanwhile the females have more outliers. Other than this, there is no clear sign that there is correlation with the birth weight when sex is isolated. However, we don't know how significantly this variable is associated with others and therefore could be essential when fitting the model.
+
+
+By looking at the qqplot plots of all the variables we can identify the ones with the most weighted tails and therefore which ones are skewed. We found that the weight of the mother is the most positively skewed and therefore a transformation should be used. 
+
+
+
+
+```{r}
+qqnorm(weight, main = "Weight of Mother")
+qqline(weight)
+qqnorm(log(weight), main= "Log(weight) of mother")
+qqline(log(weight))
+```
+By taking the log of this variable, it has decreased the amount of skew making the data more representable.
+
+We start our modelling process by including the weight of the mother and the gestation period and we can compare how effective the log transformation.
+
+```{r}
+Ml1<- lm(bwt~ gest+weight)
+M1 <- lm(bwt~ gest+log(weight))
+summary(Ml1)
+summary(M1)
+```
+Both variables have a strong significance as the both would be accepted at a 1% level, by taking the log of weight it decreases the p value which further supports the fact that it should be used. However, because only 2 variables are included we cant make any clear judgments before comparing it to other models. The adjusted r value allows us to see the percentage of variation for the birth weight of that model and allows us to directly compare nested models, the higher the value, the better the model.
+
+We now move onto including the continuous variables.
+```{r}
+m1<- lm(bwt~ age+gest+rate+log(weight), data = Births)
+summary(m1)
+```
+When looking at the significance of each factor we can see that age has a p value above 0.5 meaning it would be rejected at a 5% level and hence age is not that significant in this model. By taking this factor out we can see what impact it will have.
+```{r}
+
+m2<- lm(bwt~ gest+rate+log(weight), data = Births)
+summary(m2)
+```
+After removing age we can see that the adjusted r squared has decreased by 0.0056. However, the fact that the p value has decreased for each of the variables and now all can be accepted at a 1% level shows that this could improve it. When we test the model we should test both cases and compare whether age should be included.
+
+We can see the significance of the smokes factor by adding it and comparing it with the previous model using the anova function.
+```{r}
+m5<- lm(bwt~ gest + rate + log(weight) + smokes, data = Births)
+anova(m2,m5)
+
+```
+The anova function conducts a hypothesis test and gives a p value showing how significant the variable added is to the model. We get a p value 0.2854 and therefore we do not reject H0 at the any level as it shows no evidence that there is any association between the amount the mother smoked and the birth weight.
+
+We now conduct the same test with sex and age added.
+
+```{r}
+m3<-lm(formula = bwt ~ gest + rate + log(weight) + sex, data = Births)
+anova(m2,m3)
+
+```
+
+```{r}
+m6<- lm(bwt~ gest+ rate+ log(weight)+ sex+ age, data = Births)
+anova(m3,m6)
+
+```
+For both hypothesis'the p value lies between 0.05 and 0.1, this means that  the addition of the variable wouldn't be accepted at a 5 % level but at a 10% level, thus meaning it shows mild significance.
+
+Because m2 and m3 are nested models of m6 we are able to use the adjusted r squared value to directly compare the significance of the additional variables. 
+```{r}
+summary(m2)$adj.r.squared
+summary(m3)$adj.r.squared
+summary(m6)$adj.r.squared
+```
+Clearly the adjusted r squared value is the highest for m6 and therefore the addition of the sex and age factor out weighs the penalty for increasing the complexity of the model.
+
+We can look at the following metrics: BIC, CP and AIC, which are used for model evaluation and selection. These are unbiased estimates of the model prediction error; the lower these metrics, the better the model.
+
+Firstly we look at the value of BIC including all the variables.
+
+```{r}
+library(leaps)
+a<- regsubsets(bwt~ gest+ log(weight)+ sex+ smokes+ rate+ age, data = Births)
+summary(a)
+summary(a)$bic
+
+```
+
+The three optimum models according to BIC values all include the variables gest and weight, the model including only these two factors give the second lowest value, reinforcing that these are the most influential variables. The model with the lowest BIC value contains gest, weight and rate. However, from our previous finding we know that by including sex and age it increases the adjusted r squared value, the combination of all of these give the third best value for BIC. As more variables are added the BIC value gets less negative showing that over complicating the model is not beneficial. The worst model according to BIC only includes the gestation period, this is due to it being too simple and does not account for other important factors.
+
+Moving onto the Cp value, the best model is where cp is closest to equaling p.
+```{r}
+summary(a)
+summary(a)$cp
+
+```
+This is the case when p=6 and the cp value is 6.55, this shows that 6 variables should be included, the Cp function separates the factor variables and assesses the importance of each level. We can see that the fact the mother doesn't smoke has more of an impact on the birth weight than if the mother smokes at all. However by including all the variables we are at risk over complicating the model. 
+
+Finally we can use step wise regression to go through each of the models, accounting for the benefit and penalty of adding each variable. It is similar to the the BIC with a weaker penalty for each variable, the lower the value the better the model.
+
+
+```{r}
+m0<- lm(bwt~1, data=Births)
+stepM2<- step(m0, scope= bwt~rate+log(weight)+age+smokes+gest+sex)
+
+```
+
+The model with the lowest AIC has the variables: gest, weight, rate, age and sex. This supports what we have previously found as this is the same model with the highest adjusted r squared value. 
+
+
+
+By plotting one of the models we are able to visualise some of its properties
+```{r}
+
+m6<- lm(bwt~ log(weight)+ gest+ rate+ sex+ age, data = Births)
+plot(m6)
+summary(m6)
+
+```
+
+From the Normal Q-Q plot we can see heavy tails which suggest positive skew in the birth weight variable. According the the bulging rule we can use the log or the square root transformation to make the relationship more linear. We can see if the transformations are beneficial by comparing the values of Bic.
+
+```{r}
+loga<- regsubsets(log(bwt)~ log(weight)+ gest+ sex+ rate+ smokes+ age, data = Births)
+sqrta<- regsubsets(sqrt(bwt)~ log(weight)+ gest+ sex+ rate+ smokes+ age, data = Births)
+
+summary(a)$bic
+summary(sqrta)$bic
+summary(loga)$bic
+
+```
+
+Using either transformation decreases the Bic and therefore improves the model, by taking the log of bwt it produces the lowest values and therefore must be included. Interestingly the worst logged model still gives a lower BIC value than the optimal model with no transformation. 
+
+We can now see how taking this log has impacted the plots:
+
+```{r}
+mlog6<- lm(log(bwt)~ gest + rate + log(weight) + sex+ age, data = Births)
+summary(mlog6)
+plot(mlog6)
+```
+
+The points in the qqplot are more linear improving the normality, furthermore, we have found our highest adjusted r squared value implying that this is our optimal model.
+
+To conclude, in order to design the most efficient model all variables were included except for the level of smoking. This is because it was significant enough and by adding it it would decrease the accuracy. In further studies this variables should be studied in more detail, to do this the number of cigarettes smoked each day should be recorded so that the data can be used as a continuous variable. The factors found to be most influential were the mothers weight pre-pregnancy, the length of the gestation period and finally the rate of growth during the first trimester. A surprising result was, whilst the sex of the baby was still a significant variable, with male babies being heavier, this was not as independently influential on the birth weight. The final variable included in the optimal model is the age of the the mother. This did not have a direct relationship with the birth weight, however it did have a significant influence on other variables and therefore is beneficial to be included.
+
+PART B
+
+We are now going to test our final models to make predictions of the birth weight from the test set and then compare them with the true known values and the full model. The models that are going to be tested are: mF, mlog2 ,mlog3 and finally mlog6
+
+```{r}
+BirthsTest<- read.table("BirthTest.txt", header = TRUE)
+smokesTest<- BirthsTest$smokes 
+sexTest<- BirthsTest$sex
+
+mF<- lm(bwt~ ., data =Births)
+mlog2<- lm(log(bwt)~ log(weight)+ rate+ gest, data = Births)
+mlog3<- lm(log(bwt)~ log(weight)+ rate+ gest+sex, data = Births)
+mlog6<- lm(log(bwt)~ gest + rate + log(weight) + sex+ age, data = Births)
+mlogF<- lm(log(bwt)~., data = Births)
+TestResponses=select(BirthsTest, bwt)$bwt
+
+
+summary(mF)
+
+```
+We are going to compare the mean square error and the mean absolute error, the smallest value would show the model with the least amount of error, we also can compare the confidence intervals. Because the models we are testing have used the log transformation we also need to take the log of the test responses to ensure that the when the difference is calculated it is proportional. 
+
+First we look at the log of the full model:
+
+```{r}
+logT<- log(TestResponses)
+
+mlogFtest=data.frame(weight=BirthsTest$weight, gest=BirthsTest$gest, rate=BirthsTest$rate, sex=BirthsTest$sex, smokes=BirthsTest$smokes, age=BirthsTest$age)
+pmlogF=predict(mlogF, mlogFtest, interval = "confidence")
+mse_mlogF<- mean((pmlogF- logT)^2)
+mae_mlogF<- mean(abs(pmlogF-logT))
+mse_mlogF
+mae_mlogF
+```
+We shall be comparing our the values of the mean squared error and the mean absolute error with these values from the full model.
+
+```{r}
+mlog2test=data.frame(weight=BirthsTest$weight, gest=BirthsTest$gest, rate=BirthsTest$rate)
+pmlog2=predict(mlog2, mlog2test, interval = "confidence")
+mse_mlog2<- mean((pmlog2- logT)^2)
+mae_mlog2<- mean(abs(pmlog2-logT))
+mse_mlog2
+mae_mlog2
+```
+This model gives the higher values than the full model meaning that some significant variables have been excluded that should be included.
+```{r}
+mlog3test=data.frame(weight=BirthsTest$weight, gest=BirthsTest$gest, rate=BirthsTest$rate, sex=BirthsTest$sex)
+pmlog3=predict(mlog3, mlog3test, interval = "confidence")
+mse_mlog3<- mean((pmlog3- logT)^2)
+mae_mlog3<- mean(abs(pmlog3-logT))
+mse_mlog3
+mae_mlog3
+```
+These values are lower than the last model and therefore showing that the sex variable should be included. This also tells us that this model is better than the full model.
+```{r}
+mlog6test=data.frame(weight=BirthsTest$weight, gest=BirthsTest$gest, rate=BirthsTest$rate, sex=BirthsTest$sex, age=BirthsTest$age)
+pmlog6=predict(mlog6, mlog6test, interval = "confidence")
+mse_mlog6<- mean((pmlog6- logT)^2)
+mae_mlog6<- mean(abs(pmlog6-logT))
+mse_mlog6
+mae_mlog6
+```
+
+Finally, these values are the lowest out of all of them and hence is our optimal model, this includes the variables: sex, gestation period, age, rate and the logged mothers weight pre-pregnancy.
+```{r}
+x=1:100
+plot(x, logT, ylab= "Logged Test Responses", xlab = "Child")
+abline(lm(logT~x))
+abline(lm(pmlog6~x), col="green")
+abline(lm(pmlog3~x), col="blue")
+abline(lm(pmlog2~x), col="red")
+abline(lm(pmlogF~x))
+```
+Summary
+The rate of growth for the first trimester, the weight of the mother and the gestation period seem to be the plausible explanations for the differences in birth weight. Transformations have been used to reduce the amount of skew leaving us with an optimal model which predicted the test results effectively.
