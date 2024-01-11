@@ -1,0 +1,2 @@
+
+In this report we will be analysing 327 observations of new born babies and investigating which variables affect the birth weight most significantly. The data then used to identify the relationships between the variables and to create a linear model that predicts the birth weight. The most influencial variables were the gestation period and the weight of the mother, others were required in the model but they were less significant.
